@@ -1,0 +1,141 @@
+# include <iostream>
+#include <iomanip>
+#include <stdio.h>
+using namespace std;
+
+struct bin_node
+{
+    int data;
+    struct bin_node* left;
+    struct bin_node* right;
+};
+
+struct bin_tree
+{
+    struct bin_node* root;
+};
+
+class BinaryTree {
+private:
+    bin_node* Root_BinaryTree = NULL;
+    int count_BinaryTree = 0;
+   
+public:
+    BinaryTree() {
+        bin_tree* Root_BinaryTree = new bin_tree;
+        
+    }
+
+    void pushElement(int aElement) {
+
+        bin_node* newElement = new bin_node;
+        newElement->data = aElement;
+        newElement->left = NULL;
+        newElement->right = NULL;
+        if (Root_BinaryTree != 0) _pushElement( Root_BinaryTree, newElement);
+        else Root_BinaryTree = newElement;
+        count_BinaryTree++;
+
+    }
+
+    bin_node* get_rootBinaryTree() {
+        return Root_BinaryTree;
+        
+    }
+    
+    void _pushElement( bin_node* atemp, bin_node* anewp) {
+        
+        if (atemp->data >= anewp->data) {
+            if (atemp->left == NULL) {
+                atemp->left = anewp;
+
+            }
+            else {
+                atemp = atemp->left;
+                _pushElement( atemp, anewp);
+            }
+        }
+
+        else if (atemp->data < anewp->data) {
+            if (atemp->right == 0) {
+                atemp->right = anewp;
+                
+
+            }
+            else {
+                atemp = atemp->right;
+                _pushElement(atemp, anewp);
+
+            }
+        }
+       
+
+    }
+
+
+    int searchElement(bin_node* atemp, int element_forSearch){
+        if (atemp->data > element_forSearch) {
+            if (atemp->left != NULL) {
+                searchElement(atemp->left, element_forSearch);
+
+            }
+            else return NULL;  
+        }
+
+        else if (atemp->data < element_forSearch) {
+            if (atemp->right != 0) {
+                searchElement(atemp->right, element_forSearch);
+                
+
+            }
+            else {
+                return NULL;
+
+            }
+        }
+        else if (atemp->data == element_forSearch) return atemp->data;
+    }
+
+    void print(bin_node* t)
+    {  
+        FILE* file = fopen("BinaryTree.txt", "a");
+       
+       
+
+        if (t) {
+            
+            //cout << setw(20-a) << t->data << endl;
+            fprintf(file, "%d ",t->data);
+            fclose(file);
+            print(t->left);
+            print(t->right);
+            
+        }
+        else {
+            //cout << setw(20-a) << 0 << endl;
+            fprintf(file, "__ ");
+            fclose(file);
+           
+        }
+    }
+
+
+};
+
+
+
+int main() {
+    BinaryTree MyTree;
+    int search;
+    int data[13] = { 19, 3, 20, 03, 1, 9, 20, 21, 92, 74, 78, 24, 80 };
+    for (int i = 0; i < 13; i++) {
+        MyTree.pushElement(data[i]);
+    }
+    MyTree.print(MyTree.get_rootBinaryTree());
+    cout << "Введите элемент для поиска: ";
+    cin >> search;
+    search = MyTree.searchElement(MyTree.get_rootBinaryTree(), search);
+    if (search) cout << search << "- такой элемент есть.";
+    else cout << "Не найдено.";
+    return 0;
+}
