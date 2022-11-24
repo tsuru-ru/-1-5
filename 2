@@ -1,0 +1,455 @@
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <tuple>
+#include <cmath>
+#include <vector>
+#include <type_traits>
+#include <iomanip>  
+#include <limits.h>
+#pragma warning(disable : 4996) - ошибка компилятора при использовании функции копирования строки(использутеся при присваивании имени базы данных)
+
+using namespace std;
+
+// универсальная структура
+struct Data
+{
+    bool emptyData = false;
+
+};
+
+
+// структура по варианту. не уверена, что значает сеанс - номер по счету или вреся сеанса в часах и минутах
+struct Film : Data {
+    char nameFilm[100];
+    int sessionFilm;
+    int costFilm;
+    int auditoriaofFilm;
+
+
+};
+
+
+//класс и дженерик шаблонной структуры
+template<typename TempStruct, typename = enable_if<is_base_of<Data, TempStruct>::value>>
+class Database {
+private:
+    Film* _filmInDatabase;
+    int _sizeDatabase;
+    char* _nameDatabise;
+
+
+public:
+    // заполнение данных структуры. если известно, сколько данных будет, то мы знаем, сколько данных окажется пустых(про цикл)
+    Database(int aLenDatabase, string aNewNameDatabase) {
+        _sizeDatabase = aLenDatabase;
+        _nameDatabise = new char[aNewNameDatabase.length() + 1];
+        strcpy(_nameDatabise, aNewNameDatabase.c_str());
+        _filmInDatabase = new Film[aLenDatabase];
+        for (size_t i = 0; i < _sizeDatabase; i++)
+            _filmInDatabase[i].emptyData = true;
+    }
+
+    ~Database() {
+        delete[] _filmInDatabase;
+    }
+
+    void cleanData(int aCleanIndex) {
+        _filmInDatabase[aCleanIndex].emptyData = true;
+
+    }
+
+    int findEmptyData() {
+        for (int i = 0; i < _sizeDatabase; i++) { if (_filmInDatabase[i].emptyData) return i; }
+        return -1;
+    }
+    // если добавляем элемент, то поле становится занято
+    void inputNewElement(TempStruct newStuct, int index) {
+        _filmInDatabase[index] = newStuct;
+        _filmInDatabase[index].emptyData = false;
+    }
+
+    TempStruct printElement(int index) {
+        return _filmInDatabase[index];
+
+    }
+
+    // использую вектора, тк раньше с ними не работала
+    vector<TempStruct> printAllElemtnts() {
+        vector<TempStruct> resultData;
+        for (size_t i = 0; i < _sizeDatabase; i++)
+            if (!_filmInDatabase[i].emptyData)
+                resultData.push_back(_filmInDatabase[i]);
+        return resultData;
+    }
+
+
+    // лямбда-функция, которая принимает структуру и элемент, который нужно найти. или близкий к нему
+    TempStruct* findIntElement(int (*selectorFunction)(TempStruct), int searchElement) {
+        int indexOfNearestElement = -1;
+        int minimalDiff = INT_MAX;
+
+        for (size_t i = 0; i < _sizeDatabase; i++)
+            if (!_filmInDatabase[i].emptyData) {
+                int valueDiff = abs(selectorFunction(_filmInDatabase[i]) - searchElement);
+
+                if (valueDiff < minimalDiff) {
+                    minimalDiff = valueDiff;
+                    indexOfNearestElement = i;
+                }
+            }
+
+        return indexOfNearestElement == -1 ? (TempStruct*)NULL : &_filmInDatabase[indexOfNearestElement];
+    }
+
+
+
+    TempStruct* findStringElement(string(*selection)(TempStruct), string searchElem) {
+        for (size_t i = 0; i < _sizeDatabase; i++) {
+            if (selection(_filmInDatabase[i]).find(searchElem) != string::npos)
+                return &_filmInDatabase[i];
+        }
+        return NULL;
+    }
+
+    template<typename TempValue>
+    TempStruct* FindMinimal(TempValue(*selectorFunction)(TempStruct)) {
+        TempValue min = selectorFunction(_filmInDatabase[0]);
+        int indexOfMinElement = -1;
+        for (size_t i = 0; i < _sizeDatabase; i++) {
+            if (!_filmInDatabase[i].emptyData && selectorFunction(_filmInDatabase[i]) <= min)
+            {
+                indexOfMinElement = i;
+                min = selectorFunction(_filmInDatabase[i]);
+            }
+        }
+
+        return indexOfMinElement == -1 ? (TempStruct*)NULL : &_filmInDatabase[indexOfMinElement];
+    }
+
+
+    void Sorting(bool (*selection)(TempStruct, TempStruct)) {
+        for (int i = 0; i < _sizeDatabase; i++) {
+            for (int j = 0; j < _sizeDatabase; j++) {
+                if (selection(_filmInDatabase[j], _filmInDatabase[j + 1])) {
+                    TempStruct tempToSwap = _filmInDatabase[j];
+                    _filmInDatabase[j] = _filmInDatabase[j + 1];
+                    _filmInDatabase[j + 1] = tempToSwap;
+                }
+            }
+        }
+    }
+
+
+    void Save() {
+        FILE* file = fopen(_nameDatabise, "wb");
+
+        for (int i = 0; i < _sizeDatabase; i++)
+            fwrite(&_filmInDatabase[i], sizeof(TempStruct), 1, file);
+
+        fclose(file);
+
+    }
+
+    void Restore() {
+        FILE* file = fopen(_nameDatabise, "rb");
+
+        for (int i = 0; i < _sizeDatabase; i++)
+            fread(&_filmInDatabase[i], sizeof(TempStruct), 1, file);
+
+        fclose(file);
+    }
+};
+
+int main() {
+    int instractionFromPerson;
+    int dbSize;
+    string dbName;
+    int coutNewElement;int insrt;
+    int indexForClean;
+    int indexForPrint;
+    char findMinInt;
+    int cost, session, auditoria, typeSorting;
+    vector<Film> all;
+    Film one;
+    vector<Film> allAfterSort;
+    Film* minByCost;
+    Film* minBySession;
+    Film* minByAuditoria;
+    Film* minByName;
+    Film* resByStr;
+    string name;
+    char typefind;
+
+
+    cout << "Для начала работы с базой данных, введите размер и имя." << endl;
+    cout << "Размер: ";
+    cin >> dbSize;
+    cout << "Имя: ";
+    cin >> dbName;
+    Database<Film>* database = new Database<Film>(dbSize, dbName);
+
+    do {
+
+        cout << "Нажмите 1 для ввода элементов в базу данных.  " << endl;
+        cout << "Нажмите 2 для очистки элемента в базе данных." << endl;
+        cout << "Нажмите 3 для поиска свободной переменной" << endl;
+        cout << "Нажмите 4 для вывода одного элемента" << endl;
+        cout << "Нажмите 5 для вывода всей базы данных" << endl;
+        cout << "Нажмите 6 для поиска с заданным значением поля" << endl;
+        cout << "Нажмите 7 для сортировки" << endl;
+        cout << "Нажмите 8 для сохранения базы данных в файл" << endl;
+        cout << "Нажмите 9 для чтения записей из файла" << endl;
+        cout << "Нажмите -1 для выхода из программы" << endl;
+
+        cin >> instractionFromPerson;
+        switch (instractionFromPerson) {
+
+        case 1:
+            cout << "Сколько будет записей в базе?" << endl;
+            do {
+                cin >> coutNewElement;
+            } while (coutNewElement > dbSize);
+            for (size_t i = 0; i < coutNewElement; i++)
+            {
+                Film structure;
+                cout << "Name Film: ";
+                cin >> structure.nameFilm;
+                cout << "Session Film: ";
+                cin >> structure.sessionFilm;
+                cout << "Cost Film: ";
+                cin >> structure.costFilm;
+                cout << "Auditoria of Film Film: ";
+                cin >> structure.auditoriaofFilm;
+
+                database->inputNewElement(structure, i);
+                cout << "Добавлен " << i + 1 << " элемент из " << coutNewElement << endl;
+            }
+            break;
+
+
+        case 2:
+            cout << "Какой очистить элемент по счету(начинаем с 0)?" << endl;
+            cin >> indexForClean;
+            while (indexForClean >= dbSize) { cout << "Ошибка. Введите другое значение индекса"; cin >> indexForClean; }
+            database->cleanData(indexForClean);
+            break;
+
+        case 3:
+            cout << "Первая свободная переменная:" << database->findEmptyData() << endl;
+            break;
+
+        case 4:
+            cout << "Какой вывести элемент по счету(начинаем с 0)?" << endl;
+            cin >> indexForPrint;
+            while (indexForPrint >= dbSize) { cout << "Ошибка. Введите другое значение индекса"; cin >> indexForPrint; }
+            one = database->printElement(indexForPrint);
+            cout << one.nameFilm << "   " << one.sessionFilm << "   " << one.costFilm << "   " << one.auditoriaofFilm << endl;
+
+            break;
+
+        case 5:
+            cout << "База данных" << endl;
+            all = database->printAllElemtnts();
+            cout << "Name" << setw(10) << "Session" << setw(10) << "Cost" << setw(14) << "Auditoria" << endl;
+            for (size_t i = 0; i < all.size(); i++)
+                cout << all[i].nameFilm << "   " << all[i].sessionFilm << "   " << all[i].costFilm << "   " << all[i].auditoriaofFilm << endl;
+            break;
+        case 6:
+            cout << "Какое значение искать? Нажмите i - для числового, s - для строки.";
+            cin >> typefind;
+            switch (typefind) {
+            case 'i':
+                cout << "Что будем искать? сеанс - S, цену - C или аудиторию - A" << endl;
+                cin >> findMinInt;
+                switch (findMinInt) {
+                case 'C':
+                    cout << "Цена для поиска: ";
+                    cin >> cost;
+                    cout << "Искомая цена: ";
+                    minByCost = database->findIntElement([](Film p) { return p.costFilm; }, cost);
+                    if (minByCost == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minByCost->nameFilm << " " << minByCost->sessionFilm << " " << minByCost->costFilm << " " << minByCost->auditoriaofFilm << endl;
+                    break;
+                case 'S':
+                    cout << "Сеанс для поиска: ";
+                    cin >> session;
+                    cout << "Искомый номер сеанса: ";
+                    minBySession = database->findIntElement([](Film p) { return p.sessionFilm; }, session);
+                    if (minBySession == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minBySession->nameFilm << " " << minBySession->sessionFilm << " " << minBySession->costFilm << " " << minBySession->auditoriaofFilm << endl;
+                    break;
+                case 'A':
+                    cout << "Аудитория для поиска: ";
+                    cin >> auditoria;
+                    cout << "Мскомая аудитория: ";
+                    minByAuditoria = database->findIntElement([](Film p) { return p.auditoriaofFilm; }, auditoria);
+                    if (minByAuditoria == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minByAuditoria->nameFilm << " " << minByAuditoria->sessionFilm << " " << minByAuditoria->costFilm << " " << minByAuditoria->auditoriaofFilm << endl;
+                    break;
+                }break;
+                
+            case 's':
+
+                cout << "Имя для поиска: ";
+                cin >> name;
+                resByStr = database->findStringElement([](Film p) { return string(p.nameFilm); }, name);
+                if (resByStr == NULL)
+                    cout << "NotFound!" << endl;
+                else
+                    cout << resByStr->nameFilm << " " << resByStr->sessionFilm << " " << resByStr->costFilm << " " << resByStr->auditoriaofFilm << endl;
+
+
+        
+
+            }break;
+
+
+        case 7:
+
+            cout << "Выберите тип сортировки: минимальное по строке - 1, минимальное по числу - 2, по возрастанию - 3, по убыванию - 4." << endl;
+            cin >> typeSorting;
+            switch (typeSorting) {
+            case 1:
+                minByName = database->FindMinimal<string>([](Film p) { return string(p.nameFilm); });
+                cout << "Min by Name: " << minByName->nameFilm << " " << minByName->sessionFilm << " " << minByName->costFilm << " " << minByName->auditoriaofFilm << endl;
+                break;
+            case 2:
+            {
+                int findMinInt;
+                cout << "Что будем искать? сеанс - 1, цену - 2 или аудиторию - 3" << endl;
+                cin >> findMinInt;
+                switch (findMinInt) {
+                case 2:
+                    cout << "Минимальная цена: ";
+                    minByCost = database->FindMinimal<int>([](Film p) { return p.costFilm; });
+                    if (minByCost == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minByCost->nameFilm << " " << minByCost->sessionFilm << " " << minByCost->costFilm << " " << minByCost->auditoriaofFilm << endl;
+                    break;
+                case 1:
+                    cout << "Минимальный номер сеанса: ";
+                    minBySession = database->FindMinimal<int>([](Film p) { return p.sessionFilm; });
+                    if (minBySession == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minBySession->nameFilm << " " << minBySession->sessionFilm << " " << minBySession->costFilm << " " << minBySession->auditoriaofFilm << endl;
+                    break;
+                case 3:
+                    cout << "Наименьшая аудитория: ";
+                    minByAuditoria = database->FindMinimal<int>([](Film p) { return p.auditoriaofFilm; });
+                    if (minByAuditoria == NULL)
+                        cout << "NotFound!" << endl;
+                    else
+                        cout << minByAuditoria->nameFilm << " " << minByAuditoria->sessionFilm << " " << minByAuditoria->costFilm << " " << minByAuditoria->auditoriaofFilm << endl;
+                    break;
+                }
+
+            } break;
+            case 3:
+            {
+                
+                int insrt;
+                cout << "Критерий сортировки: название - 1, цена - 2, аудитория - 3, сеанс - 4" << endl;
+                cin >> insrt;
+                switch (insrt) {
+                case 1:
+                    database->Sorting([](Film p1, Film p2){ return string(p1.nameFilm) > string(p2.nameFilm); });
+                    cout << "Сортировка по возрастанию имени: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < all.size(); i++) cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                case 2:
+                    database->Sorting([](Film p1, Film p2){ return int(p1.costFilm) > int(p2.costFilm); });
+                    cout << "Сортировка по возрастанию цены: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < all.size(); i++) cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+
+                case 3:
+                    database->Sorting([](Film p1, Film p2) { return int(p1.auditoriaofFilm) > int(p2.auditoriaofFilm); });
+                    cout << "Сортировка по возрастанию аудитории: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < all.size(); i++) cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                    
+                case 4:
+                    database->Sorting([](Film p1, Film p2) { return int(p1.sessionFilm) > int(p2.sessionFilm); });
+                    cout << "Сортировка по возрастанию сеанса: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < all.size(); i++) cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                    
+                
+                }
+            }break;
+
+            case 4:
+            {
+                
+                cout << "Критерий сортировки: название - 1, цена - 2, аудитория - 3, сеанс - 4" << endl;
+                cin >> insrt;
+                switch (insrt) {
+                case 1:
+                    database->Sorting([](Film p1, Film p2) { return string(p1.nameFilm) < string(p2.nameFilm); });
+                    cout << "Сортировка по убыванию имени: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < allAfterSort.size(); i++)
+                        cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                case 2:
+                    database->Sorting([](Film p1, Film p2) { return int(p1.costFilm) < int(p2.costFilm); });
+                    cout << "Сортировка по убыванию цены: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < allAfterSort.size(); i++)
+                        cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+
+                case 3:
+                    database->Sorting([](Film p1, Film p2) { return int(p1.auditoriaofFilm) < int(p2.auditoriaofFilm); });
+                    cout << "Сортировка по убыванию аудитории: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < allAfterSort.size(); i++)
+                        cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                    
+                case 4:
+                    database->Sorting([](Film p1, Film p2) { return int(p1.sessionFilm) < int(p2.sessionFilm); });
+                    cout << "Сортировка по убыванию сеанса: " << endl;
+                    allAfterSort = database->printAllElemtnts();
+                    for (size_t i = 0; i < allAfterSort.size(); i++)
+                        cout << allAfterSort[i].nameFilm << " " << allAfterSort[i].sessionFilm << " " << allAfterSort[i].costFilm << " " << allAfterSort[i].auditoriaofFilm << endl;
+                    break;
+                    
+                }
+            }
+
+            }break;
+        case 8:
+            database->Save();
+            cout << "Сохранено.";
+            break;
+
+        case 9:
+            database->Restore();
+            cout << "Прочитано.";
+            break;
+
+        
+
+        case -1:
+            cout << "Работа закончена."; break;
+
+
+        }
+    } while (instractionFromPerson != -1);
+
+    return 0;
+}
