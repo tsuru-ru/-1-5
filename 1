@@ -1,0 +1,151 @@
+// очередь
+#include <iostream>
+using namespace std;
+
+class Queue { 
+    private: 
+    int* _arr; 
+    int _headQueue; 
+    int _tailQueue; 
+    int _lenQueue;
+    public: 
+    
+    Queue(int aNewLenQueue){
+        _headQueue = 0;
+        _tailQueue = 0;
+        _arr = new int[aNewLenQueue++];
+        _lenQueue = aNewLenQueue;
+    }
+    
+    ~ Queue(){
+        delete[] _arr;
+        
+    }
+    
+    void pushElement(int aNewElemant) {
+        if (_headQueue != (_tailQueue + 1) % _lenQueue){ 
+            _arr[_tailQueue] = aNewElemant;
+            _tailQueue = (_tailQueue + 1) % _lenQueue;
+            }
+        else throw 1;
+        
+    }
+
+int popElement(){
+    if (_headQueue != _tailQueue){
+        int tmpHeadQueue = _arr[_headQueue];
+        _headQueue = (_headQueue + 1) % _lenQueue;
+        return tmpHeadQueue;
+        
+    }
+        else throw 0;
+    
+}
+};
+
+
+
+
+int main(){
+    int myNewQueue;
+    int mylenQueue;
+    int instruction;
+    cout << "Сколько будет элементов в очереди: ";
+    cin >> mylenQueue;
+    Queue myQueue(mylenQueue);
+    do{ cout << "Для добавление введите 1, для извлечения 0, для выхода из программы -1: ";
+        cin >> instruction;
+        switch (instruction){
+            case 1:
+            cout << "Введите значение: ";
+            cin >> myNewQueue;
+            try{ myQueue.pushElement(myNewQueue);}
+            catch(int errorFull){ cout << "Ошибка. Очередь уже заполнена." << endl;}
+            break;
+            
+        
+        case 0:
+            try{cout << "Вывод: "<< myQueue.popElement() << endl;}
+            catch(int errorEmpty){cout << "Очередь пока пуста" << endl;}
+            break;
+            
+        case -1: break;
+        
+        default:
+            cout << "Неверное значение.\n";
+            
+        };
+        }while(instruction != -1);
+        return 0;
+}
+
+
+
+// стек
+#include <iostream>
+using namespace std;
+
+class Stack { 
+    private: 
+    int* _arr; 
+    int _topStack; 
+    int _lenStack;
+    public: 
+    
+    Stack(int aNewLenStack) {
+        _topStack = -1;
+        _arr = new int[aNewLenStack];
+        _lenStack = aNewLenStack;
+    }
+
+    void pushElement(int aNewElement) {
+        if (_topStack == _lenStack - 1) throw 0;
+        else _arr[++_topStack]= aNewElement;
+    }
+
+int ElementTop(){
+    bool isElementTop;
+    if (_topStack == _lenStack - 1) isElementTop = 1;
+    else isElementTop = 0;
+    return isElementTop;
+}
+
+int popElement(){
+    if (_topStack >= 0) return _arr[_topStack--]; 
+        else throw 1;
+    }
+};
+
+
+int main(){
+    int myNewElement;
+    int mylenStack;
+    int instruction;
+    cout << "Сколько будет элементов в стеке: ";
+    cin >> mylenStack;
+    Stack myStack(mylenStack);
+    do{ cout << "Для добавление введите 1, для извлечения 0, для выхода из программы -1: ";
+        cin >> instruction;
+        switch (instruction){
+            case 1:
+            cout << "Введите значение: ";
+            cin >> myNewElement;
+            try{ myStack.pushElement(myNewElement);}
+            catch(int errorFull){ cout << "Ошибка. Стек уже заполнен." << endl;}
+            break;
+            
+        
+        case 0:
+            try{cout << "Вывод: "<< myStack.popElement() << endl;}
+            catch(int errorEmpty){cout << "Стек пока пуст." << endl;}
+            break;
+            
+        case -1: break;
+        
+        default:
+            cout << "Неверное значение.\n";
+            
+        };
+        }while(instruction != -1);
+        return 0;
+}
